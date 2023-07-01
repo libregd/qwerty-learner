@@ -5,13 +5,13 @@ import RemarkRing from './RemarkRing'
 import WordChip from './WordChip'
 import styles from './index.module.css'
 import Tooltip from '@/components/Tooltip'
-import { currentChapterAtom, currentDictInfoAtom, infoPanelStateAtom, randomConfigAtom } from '@/store'
-import { InfoPanelType } from '@/typings'
-import { WordWithIndex } from '@/typings'
+import { currentChapterAtom, currentDictInfoAtom, infoPanelStateAtom, randomConfigAtom, wordDictationConfigAtom } from '@/store'
+import type { InfoPanelType } from '@/typings'
+import type { WordWithIndex } from '@/typings'
 import { recordOpenInfoPanelAction } from '@/utils'
 import { Transition } from '@headlessui/react'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { useCallback, useContext, useMemo } from 'react'
+import { useCallback, useContext, useEffect, useMemo } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import IconCoffee from '~icons/mdi/coffee'
 import IconXiaoHongShu from '~icons/my-icons/xiaohongshu'
@@ -23,10 +23,16 @@ const ResultScreen = () => {
   // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
   const { state, dispatch } = useContext(TypingContext)!
 
+  const setWordDictationConfig = useSetAtom(wordDictationConfigAtom)
   const currentDictInfo = useAtomValue(currentDictInfoAtom)
   const [currentChapter, setCurrentChapter] = useAtom(currentChapterAtom)
   const setInfoPanelState = useSetAtom(infoPanelStateAtom)
   const randomConfig = useAtomValue(randomConfigAtom)
+
+  useEffect(() => {
+    // tick a zero timer to calc the stats
+    dispatch({ type: TypingStateActionType.TICK_TIMER, addTime: 0 })
+  }, [dispatch])
 
   const wrongWords = useMemo(() => {
     const wordList = state.chapterData.wrongWordIndexes.map((index) => state.chapterData.words.find((word) => word.index === index))
@@ -64,19 +70,37 @@ const ResultScreen = () => {
   }, [state.timerData.time])
 
   const repeatButtonHandler = useCallback(() => {
+    setWordDictationConfig((old) => {
+      if (old.isOpen) {
+        if (old.openBy === 'auto') {
+          return { ...old, isOpen: false }
+        }
+      }
+      return old
+    })
     dispatch({ type: TypingStateActionType.REPEAT_CHAPTER, shouldShuffle: randomConfig.isOpen })
-  }, [dispatch, randomConfig.isOpen])
+  }, [dispatch, randomConfig.isOpen, setWordDictationConfig])
 
   const dictationButtonHandler = useCallback(() => {
-    dispatch({ type: TypingStateActionType.DICTATION_CHAPTER, shouldShuffle: randomConfig.isOpen })
-  }, [dispatch, randomConfig.isOpen])
+    setWordDictationConfig((old) => ({ ...old, isOpen: true, openBy: 'auto' }))
+
+    dispatch({ type: TypingStateActionType.REPEAT_CHAPTER, shouldShuffle: randomConfig.isOpen })
+  }, [dispatch, randomConfig.isOpen, setWordDictationConfig])
 
   const nextButtonHandler = useCallback(() => {
+    setWordDictationConfig((old) => {
+      if (old.isOpen) {
+        if (old.openBy === 'auto') {
+          return { ...old, isOpen: false }
+        }
+      }
+      return old
+    })
     if (!isLastChapter) {
       setCurrentChapter((old) => old + 1)
       dispatch({ type: TypingStateActionType.NEXT_CHAPTER })
     }
-  }, [dispatch, isLastChapter, setCurrentChapter])
+  }, [dispatch, isLastChapter, setCurrentChapter, setWordDictationConfig])
 
   const exitButtonHandler = useCallback(() => {
     dispatch({ type: TypingStateActionType.REPEAT_CHAPTER, shouldShuffle: false })
@@ -91,7 +115,9 @@ const ResultScreen = () => {
 
   useHotkeys(
     'space',
-    () => {
+    (e) => {
+      // 火狐浏览器的阻止事件无效，会导致按空格键后 再次输入正确的第一个字母会报错
+      e.stopPropagation()
       repeatButtonHandler()
     },
     { preventDefault: true },

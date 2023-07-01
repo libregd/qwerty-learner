@@ -1,7 +1,16 @@
+import atomForConfig from './atomForConfig'
 import { DISMISS_START_CARD_DATE_KEY } from '@/constants'
 import { idDictionaryMap } from '@/resources/dictionary'
-import { keySoundResources, wrongSoundResources, correctSoundResources } from '@/resources/soundResource'
-import { PronunciationType, PhoneticType, Dictionary, InfoPanelState } from '@/typings'
+import { correctSoundResources, keySoundResources, wrongSoundResources } from '@/resources/soundResource'
+import type {
+  Dictionary,
+  InfoPanelState,
+  LoopWordTimesOption,
+  PhoneticType,
+  PronunciationType,
+  WordDictationOpenBy,
+  WordDictationType,
+} from '@/typings'
 import { atom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 
@@ -18,14 +27,18 @@ export const currentDictInfoAtom = atom<Dictionary>((get) => {
 
 export const currentChapterAtom = atomWithStorage('currentChapter', 0)
 
-export const keySoundsConfigAtom = atomWithStorage('keySoundsConfig', {
+export const loopWordConfigAtom = atomForConfig<{ times: LoopWordTimesOption }>('loopWordConfig', {
+  times: 1,
+})
+
+export const keySoundsConfigAtom = atomForConfig('keySoundsConfig', {
   isOpen: true,
   isOpenClickSound: true,
   volume: 1,
   resource: keySoundResources[0],
 })
 
-export const hintSoundsConfigAtom = atomWithStorage('hintSoundsConfig', {
+export const hintSoundsConfigAtom = atomForConfig('hintSoundsConfig', {
   isOpen: true,
   volume: 1,
   isOpenWrongSound: true,
@@ -34,25 +47,33 @@ export const hintSoundsConfigAtom = atomWithStorage('hintSoundsConfig', {
   correctResource: correctSoundResources[0],
 })
 
-export const pronunciationConfigAtom = atomWithStorage('pronunciation', {
+export const pronunciationConfigAtom = atomForConfig('pronunciation', {
   isOpen: true,
   volume: 1,
   type: 'us' as PronunciationType,
   name: '美音',
   isLoop: false,
+  isTransRead: false,
+  transVolume: 1,
   rate: 1,
 })
 export const pronunciationIsOpenAtom = atom((get) => get(pronunciationConfigAtom).isOpen)
 
-export const randomConfigAtom = atomWithStorage('randomConfig', {
+export const pronunciationIsTransReadAtom = atom((get) => get(pronunciationConfigAtom).isTransRead)
+
+export const randomConfigAtom = atomForConfig('randomConfig', {
   isOpen: false,
 })
 
+export const isShowPrevAndNextWordAtom = atomWithStorage('isShowPrevAndNextWord', true)
+
 export const isIgnoreCaseAtom = atomWithStorage('isIgnoreCase', true)
+
+export const isShowAnswerOnHoverAtom = atomWithStorage('isShowAnswerOnHover', true)
 
 export const isTextSelectableAtom = atomWithStorage('isTextSelectable', false)
 
-export const phoneticConfigAtom = atomWithStorage('phoneticConfig', {
+export const phoneticConfigAtom = atomForConfig('phoneticConfig', {
   isOpen: true,
   type: 'us' as PhoneticType,
 })
@@ -68,6 +89,12 @@ export const infoPanelStateAtom = atom<InfoPanelState>({
   vsc: false,
   community: false,
   redBook: false,
+})
+
+export const wordDictationConfigAtom = atomForConfig('wordDictationConfig', {
+  isOpen: false,
+  type: 'hideAll' as WordDictationType,
+  openBy: 'auto' as WordDictationOpenBy,
 })
 
 export const dismissStartCardDateAtom = atomWithStorage<Date | null>(DISMISS_START_CARD_DATE_KEY, null)
